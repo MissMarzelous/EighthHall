@@ -1,0 +1,21 @@
+# Build output (CMake, IDEs)
+build*/
+cmake-build-*/
+out/
+dist/
+.vs/
+.vscode/
+.idea/
+*.xcodeproj/
+*.xcworkspace/
+
+# OS clutter
+.DS_Store
+Thumbs.db
+
+# Rendered audio from the test program
+demo-audio/
+
+# Python
+__pycache__/
+*.pyc
