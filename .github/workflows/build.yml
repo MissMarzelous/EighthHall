@@ -1,0 +1,144 @@
+# =============================================================================
+#  Build, test and package Eighth Hall on Windows, macOS and Linux.
+#
+#  This runs automatically on GitHub's computers every time you push code -
+#  you don't need to own a Mac or a Windows PC to ship for them.
+#
+#   - Every push / pull request: build + run DSP tests + run pluginval.
+#     Download the results from the "Actions" tab -> pick a run -> Artifacts.
+#   - Publishing a GitHub Release (repo page -> Releases -> Draft a new release,
+#     tag e.g. v1.0.0 -> Publish) builds everything again and attaches
+#     ready-to-install zips for all three platforms to that release.
+# =============================================================================
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  release:
+    types: [ published ]
+  workflow_dispatch:     # adds a "Run workflow" button in the Actions tab
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            pluginval: pluginval_Windows.zip
+          - name: macOS
+            os: macos-latest
+            pluginval: pluginval_macOS.zip
+            # Universal binary: runs natively on Apple Silicon and Intel Macs
+            extra_cmake: -G Ninja -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          - name: Linux
+            os: ubuntu-24.04
+            pluginval: pluginval_Linux.zip
+            extra_cmake: -G Ninja
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build xvfb \
+            libasound2-dev libx11-dev libxcomposite-dev libxcursor-dev libxext-dev \
+            libxinerama-dev libxrandr-dev libxrender-dev libfreetype-dev \
+            libfontconfig1-dev libgl1-mesa-dev
+
+      - name: Install Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Configure
+        shell: bash
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} ${{ matrix.extra_cmake }}
+
+      - name: Build
+        shell: bash
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel 4
+
+      - name: Run DSP tests
+        shell: bash
+        run: ctest --test-dir build -C ${{ env.BUILD_TYPE }} --output-on-failure
+
+      - name: Ad-hoc code sign (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          ART=build/EighthHall_artefacts/${{ env.BUILD_TYPE }}
+          for b in "$ART/VST3/Eighth Hall.vst3" "$ART/AU/Eighth Hall.component" "$ART/Standalone/Eighth Hall.app"; do
+            codesign --force --deep --sign - "$b"
+          done
+
+      - name: Validate with pluginval (strictness 10)
+        shell: bash
+        run: |
+          curl -sSL -o pluginval.zip "https://github.com/Tracktion/pluginval/releases/latest/download/${{ matrix.pluginval }}"
+          cmake -E tar xf pluginval.zip
+          VST3="build/EighthHall_artefacts/${{ env.BUILD_TYPE }}/VST3/Eighth Hall.vst3"
+          case "$RUNNER_OS" in
+            Linux)   xvfb-run -a ./pluginval --strictness-level 10 --validate-in-process --validate "$VST3" ;;
+            macOS)   pluginval.app/Contents/MacOS/pluginval --strictness-level 10 --validate-in-process --validate "$VST3" ;;
+            Windows) ./pluginval.exe --strictness-level 10 --validate-in-process --validate "$VST3" ;;
+          esac
+
+      - name: Validate Audio Unit with auval (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R "build/EighthHall_artefacts/${{ env.BUILD_TYPE }}/AU/Eighth Hall.component" ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar || true
+          auval -v aufx Ehal Fbrk
+
+      - name: Package
+        shell: bash
+        run: |
+          VERSION=$(grep -m1 -oE 'VERSION [0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt | cut -d' ' -f2)
+          ART=build/EighthHall_artefacts/${{ env.BUILD_TYPE }}
+          PKG="EighthHall-$VERSION-${{ matrix.name }}"
+          mkdir -p "dist/$PKG"
+          cp -R "$ART/VST3/Eighth Hall.vst3" "dist/$PKG/"
+          case "$RUNNER_OS" in
+            macOS)   cp -R "$ART/AU/Eighth Hall.component" "$ART/Standalone/Eighth Hall.app" "dist/$PKG/" ;;
+            Linux)   cp -R "$ART/LV2/Eighth Hall.lv2" "$ART/Standalone/Eighth Hall" "dist/$PKG/" ;;
+            Windows) cp "$ART/Standalone/Eighth Hall.exe" "dist/$PKG/" ;;
+          esac
+          cp docs/INSTALL.md "dist/$PKG/INSTALL.md"
+          cd dist && cmake -E tar cf "$PKG.zip" --format=zip "$PKG"
+          echo "PKG=$PKG" >> "$GITHUB_ENV"
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PKG }}
+          path: dist/${{ env.PKG }}.zip
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: dist/*.zip
