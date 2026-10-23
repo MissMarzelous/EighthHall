@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eighth Hall Reverb | Marlena Fabrick</title>
+<meta name="description" content="Eighth Hall: a free algorithmic reverb plugin (VST3 / AU / LV2) for Windows, macOS and Linux, designed and coded in C++ by Marlena Fabrick.">
+<meta property="og:title" content="Eighth Hall Reverb by Marlena Fabrick">
+<meta property="og:description" content="Free algorithmic reverb plugin for Windows, macOS and Linux. Custom feedback-delay-network DSP in C++/JUCE.">
+<meta property="og:image" content="images/screenshot.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e1015; --panel: #161a22; --edge: #232936; --track: #2a303d;
+    --accent: #5cc8dc; --warm: #f0b46a; --text: #e6e8ee; --dim: #8a91a3;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+  h1, h2, h3 { font-family: "Space Grotesk", Inter, sans-serif; line-height: 1.15; margin: 0 0 .5em; }
+  h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); }
+  .eyebrow { color: var(--accent); font: 700 .78rem/1 "Space Grotesk", sans-serif; letter-spacing: .25em; text-transform: uppercase; }
+  .muted { color: var(--dim); }
+
+  nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
+  nav a { color: var(--dim); text-decoration: none; margin-left: 22px; font-size: .95rem; }
+  nav a:hover { color: var(--text); }
+  nav .home { margin: 0; color: var(--text); font-weight: 600; }
+
+  header.hero { padding: 56px 0 30px; text-align: center; }
+  .hero h1 { font-size: clamp(2.8rem, 8vw, 5rem); letter-spacing: .14em; margin: 14px 0 10px; }
+  .hero p.lead { font-size: 1.15rem; color: var(--dim); max-width: 640px; margin: 0 auto 28px; }
+  .buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 999px;
+    font-weight: 600; text-decoration: none; border: 1px solid var(--edge); color: var(--text); background: var(--panel);
+    transition: transform .15s, border-color .15s;
+  }
+  .btn:hover { transform: translateY(-1px); border-color: var(--accent); }
+  .btn.primary { background: var(--accent); color: #071318; border-color: var(--accent); }
+  .platforms { margin-top: 14px; font-size: .9rem; color: var(--dim); }
+
+  .shot { margin: 34px auto 0; max-width: 960px; border-radius: var(--radius); overflow: hidden;
+          border: 1px solid var(--edge); box-shadow: 0 30px 80px -20px rgba(92,200,220,.25); }
+  .shot img { display: block; width: 100%; height: auto; }
+
+  section { padding: 70px 0 10px; }
+
+  /* ---- shared buttons ---- */
+  .play {
+    width: 58px; height: 58px; border-radius: 50%; border: none; background: var(--accent); color: #071318;
+    cursor: pointer; display: grid; place-items: center; flex: none;
+  }
+  .play:focus-visible, .seg button:focus-visible, .pill:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  .seg { display: flex; flex-wrap: wrap; gap: 8px; }
+  .seg button {
+    font: 600 .9rem Inter, sans-serif; color: var(--dim); background: transparent; border: 1px solid var(--edge);
+    border-radius: 999px; padding: 9px 16px; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { color: #071318; background: var(--accent); border-color: var(--accent); }
+
+  /* ---- playground ---- */
+  .pg { background: var(--panel); border: 1px solid var(--edge); border-radius: var(--radius); padding: 22px; margin-top: 22px; }
+  .pg-top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .upload { position: relative; font: 600 .9rem Inter, sans-serif; color: var(--dim); border: 1px dashed var(--edge);
+            border-radius: 999px; padding: 9px 16px; cursor: pointer; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .upload:hover, .upload:focus-within { border-color: var(--accent); color: var(--text); }
+  .upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload.active { background: var(--accent); color: #071318; border-style: solid; border-color: var(--accent); }
+  .pg-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 18px 0 14px; }
+  .sel { color: var(--dim); font-size: .85rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  select { font: 500 .95rem Inter, sans-serif; color: var(--text); background: var(--bg); border: 1px solid var(--edge);
+           border-radius: 8px; padding: 8px 10px; }
+  .toggles { display: flex; gap: 8px; }
+  .pill { font: 600 .85rem Inter, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--dim);
+          background: transparent; border: 1px solid var(--edge); border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+  .pill[aria-pressed="true"] { color: var(--text); border-color: var(--accent); background: rgba(92,200,220,.2); box-shadow: 0 0 14px rgba(92,200,220,.25); }
+  .pill#pgBypass[aria-pressed="true"] { border-color: var(--warm); background: rgba(240,180,106,.15); box-shadow: none; }
+  #pgGraph { width: 100%; display: block; background: var(--bg); border: 1px solid var(--edge); border-radius: 10px; }
+  .pg-legend { display: flex; justify-content: space-between; gap: 10px; font-size: .82rem; color: var(--accent); margin: 8px 2px 4px; flex-wrap: wrap; }
+  .pg-legend .warm { color: var(--warm); }
+  .pg-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-top: 14px; }
+  .pg-group { border: 1px solid var(--edge); border-radius: 10px; padding: 14px 16px 6px; background: rgba(255,255,255,.015); }
+  .pg-group h3 { color: var(--accent); font: 700 .74rem "Space Grotesk", sans-serif; letter-spacing: .25em; margin: 0 0 10px; }
+  .ctl { margin-bottom: 12px; }
+  .ctl label { display: flex; justify-content: space-between; font-size: .82rem; color: var(--dim); font-weight: 600; letter-spacing: .04em; }
+  .ctl output { color: var(--text); font-variant-numeric: tabular-nums; font-weight: 500; }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: transparent; margin: 2px 0 0; cursor: pointer; }
+  input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent) var(--fill, 50%), var(--track) var(--fill, 50%)); }
+  input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--track); }
+  input[type=range]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--accent); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; margin-top: -6px;
+      background: var(--text); border: 3px solid var(--panel); box-shadow: 0 0 0 1px var(--accent); }
+  input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--text); border: 3px solid var(--panel); box-shadow: 0 0 0 1px var(--accent); }
+  input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .pg-hint { color: var(--dim); font-size: .82rem; margin: 6px 0 0; }
+  .pg-hint #pgStatus { color: var(--warm); }
+
+  /* ---- cards ---- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 26px; }
+  .card { background: var(--panel); border: 1px solid var(--edge); border-radius: var(--radius); padding: 22px; }
+  .card h3 { font-size: 1.1rem; margin-bottom: .4em; }
+  .card p { margin: 0; color: var(--dim); font-size: .95rem; }
+  .card .k { color: var(--accent); font: 700 1.6rem "Space Grotesk", sans-serif; display: block; margin-bottom: 6px; }
+
+  figure { margin: 26px 0 0; }
+  figure img { width: 100%; height: auto; border-radius: var(--radius); border: 1px solid var(--edge); display: block; }
+  figcaption { color: var(--dim); font-size: .9rem; margin-top: 10px; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 22px; font-size: .95rem; }
+  th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--edge); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; }
+  .table-scroll { overflow-x: auto; }
+
+  .about { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  @media (max-width: 520px) {
+    nav a { margin-left: 14px; font-size: .88rem; }
+    nav .home { font-size: .95rem; }
+  }
+  footer { padding: 60px 0 40px; color: var(--dim); font-size: .9rem; text-align: center; }
+  footer a { color: var(--dim); margin: 0 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a class="home" href="/">Marlena Fabrick</a>
+    <div>
+      <a href="#listen">Try it</a>
+      <a href="#engineering">Engineering</a>
+      <a href="https://github.com/MissMarzelous/EighthHall">GitHub</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">Fabrick Audio &middot; Free plugin</div>
+    <h1>EIGHTH HALL</h1>
+    <p class="lead">An algorithmic reverb I designed and coded from scratch in C++: smooth, dense tails from tight rooms to endless ambient washes.</p>
+    <div class="buttons">
+      <a class="btn primary" href="https://github.com/MissMarzelous/EighthHall/releases/latest">Download v1.0.0</a>
+      <a class="btn" href="https://github.com/MissMarzelous/EighthHall">View source code</a>
+    </div>
+    <div class="platforms">Windows &middot; macOS (Apple Silicon &amp; Intel) &middot; Linux &nbsp;|&nbsp; VST3 &middot; AU &middot; LV2 &middot; Standalone</div>
+    <div class="shot"><img src="images/screenshot.png" alt="Eighth Hall reverb plugin interface with a decay graph, level meters and eleven knobs grouped into Space, Tone, Motion and Output" width="960" height="560"></div>
+  </header>
+
+  <section id="listen">
+    <div class="eyebrow">Try it</div>
+    <h2>Play with the reverb in your browser</h2>
+    <p class="muted">This is the plugin's real reverb engine running live in the page. Pick a sound, press play and turn the controls. Use headphones for the best stereo picture.</p>
+
+    <div class="pg" id="playground">
+      <div class="pg-top">
+        <button class="play" id="pgPlay" aria-label="Play">
+          <svg id="pgIcon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4.5v15l13-7.5z"/></svg>
+        </button>
+        <div class="seg" role="group" aria-label="Sound">
+          <button data-sample="drums" aria-pressed="true">Drums</button>
+          <button data-sample="guitar" aria-pressed="false">Guitar</button>
+          <button data-sample="keys" aria-pressed="false">Keys</button>
+          <button data-sample="snare" aria-pressed="false">Snare hits</button>
+          <label class="upload" title="Use your own audio file">
+            <input type="file" id="pgFile" accept="audio/*">
+            <span id="pgFileLabel">Your file&hellip;</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="pg-bar">
+        <label class="sel">Preset
+          <select id="pgPreset"></select>
+        </label>
+        <div class="toggles">
+          <button class="pill" id="pgBypass" aria-pressed="false" title="Compare with the dry sound">Bypass</button>
+          <button class="pill" id="pgFreeze" aria-pressed="false" title="Hold the current tail">Freeze</button>
+        </div>
+      </div>
+
+      <canvas id="pgGraph" height="150" aria-label="Decay graph for the current settings"></canvas>
+      <div class="pg-legend"><span id="pgRt"></span><span class="warm" id="pgHighs"></span></div>
+
+      <div class="pg-groups" id="pgGroups"></div>
+      <p class="pg-hint">Double-click a slider to reset it. <span id="pgStatus"></span></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Features</div>
+    <h2>Made for mixing</h2>
+    <div class="grid">
+      <div class="card"><h3>Decay you can trust</h3><p>The Decay knob sets RT60 directly. Measured accuracy is within about 2% at every sample rate from 44.1 to 192 kHz.</p></div>
+      <div class="card"><h3>No metallic ringing</h3><p>Eight cross-coupled, gently modulated delay lines build a dense, smooth tail that flatters drums, vocals and plucks.</p></div>
+      <div class="card"><h3>Natural tone</h3><p>Damping inside the loop lets highs die faster than lows, like a real room. Low and High Cut keep the reverb out of the way.</p></div>
+      <div class="card"><h3>Freeze</h3><p>Hold the current tail forever for pads, risers and transitions.</p></div>
+      <div class="card"><h3>See what you hear</h3><p>A live graph shows pre-delay, build-up and the decay of mids and highs as you turn the knobs.</p></div>
+      <div class="card"><h3>Light on CPU</h3><p>Under 1% of one core per instance, so you can use it on every bus.</p></div>
+    </div>
+  </section>
+
+  <section id="engineering">
+    <div class="eyebrow">Under the hood</div>
+    <h2>Engineering</h2>
+    <p class="muted">The DSP engine is plain C++20 written from scratch (no stock reverb), wrapped in JUCE for the plugin formats. It's tested the way I used to QA studio hardware: feed it known signals and measure what comes out.</p>
+    <div class="grid">
+      <div class="card"><span class="k">8-line FDN</span><p>Feedback delay network with a lossless Householder matrix, cubic Hermite interpolation and per-line damping.</p></div>
+      <div class="card"><span class="k">pluginval 10</span><p>Passes Tracktion's pluginval at maximum strictness, Steinberg's VST3 validator and Apple's auval on every commit.</p></div>
+      <div class="card"><span class="k">3 platforms</span><p>GitHub Actions builds, tests and packages Windows, macOS universal and Linux releases automatically.</p></div>
+      <div class="card"><span class="k">Real-time safe</span><p>No memory allocation or locks on the audio thread, lock-free GUI metering, smoothed automation and denormal protection.</p></div>
+    </div>
+
+    <figure>
+      <img src="images/ir_analysis.png" alt="Spectrogram of the reverb's impulse response and energy decay curves in five octave bands, all straight lines with higher bands decaying faster" width="1800" height="630" loading="lazy">
+      <figcaption>Measured impulse response (Hall, Decay 2.5 s). Left: highs fade sooner than lows. Right: Schroeder energy decay per octave band shows a clean exponential tail; the low and mid bands land on the 2.5 s setting.</figcaption>
+    </figure>
+
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Automated test</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>Decay accuracy (1 kHz band, 0.5 to 6 s)</td><td>within 0.6 to 2.1%</td></tr>
+          <tr><td>Sample-rate independence (44.1 to 192 kHz)</td><td>1.98 to 1.99 s for a 2.0 s setting</td></tr>
+          <tr><td>Stress test: 200 randomized runs with automation</td><td>stable, no NaN/Inf</td></tr>
+          <tr><td>Mix at 0%</td><td>bit-transparent</td></tr>
+          <tr><td>Stereo decorrelation (mono in)</td><td>L/R correlation -0.05</td></tr>
+          <tr><td>CPU (48 kHz stereo)</td><td>about 110x faster than real time</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:22px"><a href="https://github.com/MissMarzelous/EighthHall/blob/main/docs/DSP.md">Read the full DSP design notes &rarr;</a></p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Install</div>
+    <h2>Get started</h2>
+    <div class="grid">
+      <div class="card"><h3>Windows</h3><p>Copy <code>Eighth Hall.vst3</code> to <code>C:\Program Files\Common Files\VST3</code> and rescan in your DAW.</p></div>
+      <div class="card"><h3>macOS</h3><p>Copy the VST3 to <code>~/Library/Audio/Plug-Ins/VST3</code> and the AU to <code>.../Components</code>. See the install guide for the one-time security step.</p></div>
+      <div class="card"><h3>Linux</h3><p>Copy the VST3 to <code>~/.vst3</code> or the LV2 to <code>~/.lv2</code>.</p></div>
+    </div>
+    <p style="margin-top:18px"><a href="https://github.com/MissMarzelous/EighthHall/blob/main/docs/INSTALL.md">Full install guide &rarr;</a></p>
+  </section>
+</div>
+
+<footer>
+  <div>Eighth Hall is free and open source (AGPLv3). Designed and developed by Marlena Fabrick.</div>
+  <div style="margin-top:10px">
+    <a href="/">marlenafabrick.net</a>
+    <a href="https://github.com/MissMarzelous">GitHub</a>
+    <a href="https://www.linkedin.com/in/marlena-fabrick">LinkedIn</a>
+  </div>
+</footer>
+
+<script src="reverb-engine.js"></script>
+<script src="playground.js"></script>
+</body>
+</html>
